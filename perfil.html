@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Perfil • Mercatto</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+
+*{box-sizing:border-box}
+
+body{
+margin:0;
+font-family:Inter;
+background:#f6f8fb;
+color:#0f172a;
+height:100vh;
+overflow:hidden;
+}
+
+/* LAYOUT */
+
+.app{
+display:flex;
+flex-direction:column;
+height:100vh;
+}
+
+/* HEADER */
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:20px 28px;
+background:#ffffff;
+border-bottom:1px solid #e5e7eb;
+}
+
+.profile{
+display:flex;
+align-items:center;
+gap:16px;
+cursor:pointer;
+}
+
+.avatar{
+width:56px;
+height:56px;
+border-radius:18px;
+overflow:hidden;
+background:#e2e8f0;
+box-shadow:0 10px 30px rgba(0,0,0,.08);
+}
+
+.avatar img{
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+.info{
+display:flex;
+flex-direction:column;
+}
+
+.name{
+font-size:18px;
+font-weight:700;
+}
+
+.plan{
+font-size:13px;
+color:#64748b;
+}
+
+/* DROPDOWN */
+
+.menu{
+position:absolute;
+right:30px;
+top:90px;
+background:#fff;
+border-radius:16px;
+box-shadow:0 25px 60px rgba(0,0,0,.15);
+display:none;
+padding:12px;
+min-width:220px;
+z-index:999;
+}
+
+.menu div{
+padding:12px;
+border-radius:12px;
+cursor:pointer;
+font-weight:500;
+}
+
+.menu div:hover{
+background:#f1f5f9;
+}
+
+/* CONTENT */
+
+.content{
+flex:1;
+padding:24px 28px;
+display:grid;
+grid-template-columns: 1.4fr 1fr;
+gap:20px;
+}
+
+/* LEFT */
+
+.mainCard{
+background:#fff;
+border-radius:18px;
+padding:22px;
+box-shadow:0 15px 40px rgba(0,0,0,.06);
+display:flex;
+flex-direction:column;
+gap:18px;
+}
+
+/* GRID INTERNO */
+
+.grid{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:14px;
+}
+
+.field{
+display:flex;
+flex-direction:column;
+}
+
+.label{
+font-size:12px;
+color:#64748b;
+}
+
+.value{
+font-size:15px;
+font-weight:600;
+}
+
+/* RIGHT */
+
+.side{
+display:flex;
+flex-direction:column;
+gap:16px;
+}
+
+/* STATUS */
+
+.statusCard{
+background:#fff;
+border-radius:18px;
+padding:20px;
+box-shadow:0 15px 40px rgba(0,0,0,.06);
+}
+
+.statusTitle{
+font-size:13px;
+color:#64748b;
+}
+
+.statusValue{
+font-size:20px;
+font-weight:700;
+margin-top:4px;
+}
+
+/* ALERT */
+
+.alert{
+background:#fff7ed;
+border:1px solid #fed7aa;
+color:#9a3412;
+padding:12px;
+border-radius:12px;
+font-weight:500;
+display:none;
+}
+
+/* ACTIONS */
+
+.actions{
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.btn{
+padding:14px;
+border:none;
+border-radius:14px;
+font-weight:600;
+cursor:pointer;
+}
+
+.primary{
+background:#111827;
+color:#fff;
+}
+
+.danger{
+background:#ef4444;
+color:#fff;
+}
+
+/* LOADING */
+
+.loading{
+height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:600;
+color:#64748b;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="loading" class="loading">
+Carregando perfil...
+</div>
+
+<div id="app" class="app" style="display:none">
+
+<!-- HEADER -->
+<div class="header">
+
+<div class="profile" onclick="toggleMenu()">
+<div class="avatar">
+<img id="logo">
+</div>
+
+<div class="info">
+<div class="name" id="nome"></div>
+<div class="plan" id="plano"></div>
+</div>
+</div>
+
+</div>
+
+<!-- MENU -->
+<div id="menu" class="menu">
+<div onclick="gerenciar()">Gerenciar assinatura</div>
+<div onclick="logout()">Sair</div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+<!-- ESQUERDA -->
+<div class="mainCard">
+
+<div class="grid" id="dados"></div>
+
+</div>
+
+<!-- DIREITA -->
+<div class="side">
+
+<div class="statusCard">
+<div class="statusTitle">Plano atual</div>
+<div class="statusValue" id="planoBox"></div>
+</div>
+
+<div class="statusCard">
+<div class="statusTitle">Vencimento</div>
+<div class="statusValue" id="vencimento"></div>
+</div>
+
+<div id="alerta" class="alert"></div>
+
+<div class="actions">
+<button class="btn primary" onclick="gerenciar()">Gerenciar assinatura</button>
+<button class="btn danger" onclick="logout()">Sair</button>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const client = window.supabase.createClient(
+"https://fcehmjmtxqmrjkuqlkay.supabase.co",
+"sb_publishable_iCDWHsq6EguNauQPP49JCg_jUNcz30o"
+)
+
+async function getEmail(){
+
+let email = localStorage.getItem("USER_EMAIL")
+if(email) return email
+
+const { data } = await client.auth.getUser()
+
+if(data?.user?.email){
+localStorage.setItem("USER_EMAIL", data.user.email)
+return data.user.email
+}
+
+return null
+}
+
+async function init(){
+
+const email = await getEmail()
+
+if(!email){
+document.getElementById("loading").innerText="Sessão não encontrada"
+return
+}
+
+const { data } = await client
+.from("empresas")
+.select("*")
+.eq("email", email)
+
+if(!data?.length){
+document.getElementById("loading").innerText="Empresa não encontrada"
+return
+}
+
+const e = data[0]
+
+document.getElementById("nome").innerText = e.nome_fantasia
+document.getElementById("plano").innerText = "Plano " + e.plano
+
+document.getElementById("logo").src =
+e.logo_url || "https://ui-avatars.com/api/?name="+encodeURIComponent(e.nome_fantasia)
+
+document.getElementById("planoBox").innerText = e.plano
+document.getElementById("vencimento").innerText = new Date(e.assinatura_expira).toLocaleDateString()
+
+/* ALERTA */
+const dias = Math.ceil((new Date(e.assinatura_expira)-new Date())/86400000)
+
+if(dias <= 5){
+const alerta = document.getElementById("alerta")
+alerta.style.display="block"
+alerta.innerText="Sua assinatura vence em "+dias+" dias"
+}
+
+/* GRID */
+document.getElementById("dados").innerHTML = `
+
+<div class="field"><div class="label">Empresa</div><div class="value">${e.nome}</div></div>
+<div class="field"><div class="label">CNPJ</div><div class="value">${e.cnpj}</div></div>
+
+<div class="field"><div class="label">Email</div><div class="value">${e.email}</div></div>
+<div class="field"><div class="label">Telefone</div><div class="value">${e.telefone}</div></div>
+
+<div class="field"><div class="label">Responsável</div><div class="value">${e.responsavel_nome}</div></div>
+<div class="field"><div class="label">Cidade</div><div class="value">${e.cidade}-${e.estado}</div></div>
+
+<div class="field"><div class="label">Usuários</div><div class="value">${e.usuarios_limite}</div></div>
+<div class="field"><div class="label">Filiais</div><div class="value">${e.filiais_limite}</div></div>
+
+`
+
+document.getElementById("loading").style.display="none"
+document.getElementById("app").style.display="flex"
+
+}
+
+function toggleMenu(){
+const m=document.getElementById("menu")
+m.style.display = m.style.display==="block"?"none":"block"
+}
+
+function gerenciar(){
+window.open("https://wa.me/557798253249")
+}
+
+async function logout(){
+await client.auth.signOut()
+localStorage.clear()
+window.top.location.href="index.html"
+}
+
+init()
+
+</script>
+
+</body>
+</html>
