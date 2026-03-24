@@ -462,8 +462,7 @@ const { data, error } = await sb
 .from("requisicoes")
 .select("*")
 .order("created_at", { ascending: false })
-.limit(20);
-
+.range(0, 1000)
 if(error){
  console.error(error);
  document.getElementById("overlay-carregando").style.display="none";
