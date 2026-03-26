@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Painel de Reservas • Delícia Gourmet</title>
+  <title>Painel de Reservas • Mercatto Delícia</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <meta name="color-scheme" content="light dark" />
   <style>
@@ -1017,7 +1017,7 @@ font-size:.9rem;
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <div class="wrap">
     <header>
-      <div class="title">Reservas • Delícia Gourmet</div>
+      <div class="title">Reservas • Mercatto Delícia</div>
       <div class="badge">Cadastro → Calendário → Resumo</div>
     </header>
 
@@ -1433,7 +1433,7 @@ const inicio =
 const fim =
 `${ano}-${String(mes+2).padStart(2,'0')}-01`
 const {data,error} = await supabaseClient
-.from("reservas_delicia")
+.from("reservas_mercatto")
 .select("*")
 .gte("datahora",inicio)
 .lt("datahora",fim)
@@ -1449,7 +1449,7 @@ async cadastrar(payload){
 delete payload.id
 
 const {error} = await supabaseClient
-.from("reservas_delicia")
+.from("reservas_mercatto")
 .insert(payload)
 
 if(error)
@@ -1462,7 +1462,7 @@ return {ok:true,message:"Reserva salva"}
 async atualizar(id,payload){
 
 const {error} = await supabaseClient
-.from("reservas_delicia")
+.from("reservas_mercatto")
 .update(payload)
 .eq("id",id)
 
@@ -1476,7 +1476,7 @@ return {ok:true,message:"Atualizado"}
 async concluir(id,valorFinalPago){
 
 const {error} = await supabaseClient
-.from("reservas_delicia")
+.from("reservas_mercatto")
 .update({
 status:"Concluída",
 valorFinalPago:valorFinalPago
@@ -1497,7 +1497,7 @@ return {ok:false,message:"ID inválido"}
 }
 
 const {data,error} = await supabaseClient
-.from("reservas_delicia")
+.from("reservas_mercatto")
 .delete()
 .eq("id",String(id))
 .select()
@@ -2447,7 +2447,7 @@ const id = select.dataset.id
 const novoStatus = select.value
 
 const resp = await supabaseClient
-.from("reservas_delicia")
+.from("reservas_mercatto")
 .update({status:novoStatus})
 .eq("id",id)
 
