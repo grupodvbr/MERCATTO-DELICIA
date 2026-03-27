@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
 <meta charset="UTF-8">
 <title>Controle de Perdas • Mercatto</title>
 
@@ -8,7 +9,8 @@
 content="width=device-width,
 initial-scale=1,
 maximum-scale=1,
-user-scalable=no">
+user-scalable=no,
+viewport-fit=cover">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -16,21 +18,21 @@ user-scalable=no">
 <style>
 
 /* ===== BASE ===== */
-*{box-sizing:border-box}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 
 body{
 margin:0;
 font-family:Inter;
-background:#f8fafc;
+background:#f1f5f9;
 color:#0f172a;
 }
 
 /* HEADER */
 .header{
-padding:16px;
-font-size:18px;
+padding:18px;
+font-size:20px;
 font-weight:800;
-background:#111827;
+background:#020617;
 color:#fff;
 }
 
@@ -44,50 +46,56 @@ margin:auto;
 /* CARD */
 .card{
 background:#fff;
-border-radius:16px;
+border-radius:18px;
 padding:16px;
-box-shadow:0 5px 20px rgba(0,0,0,.08);
+box-shadow:0 10px 30px rgba(0,0,0,.08);
 margin-bottom:16px;
 }
 
 /* INPUT */
-input, textarea{
+textarea{
 width:100%;
 padding:12px;
-border-radius:10px;
-border:1px solid #e5e7eb;
+border-radius:12px;
+border:1px solid #e2e8f0;
 margin-top:8px;
 font-family:Inter;
+}
+
+/* FILE */
+.file{
+margin-top:10px;
 }
 
 /* BOTAO */
 button{
 width:100%;
-padding:14px;
+padding:16px;
 border:none;
-border-radius:12px;
+border-radius:14px;
 background:#22c55e;
 color:#fff;
 font-weight:700;
-cursor:pointer;
-margin-top:10px;
+font-size:16px;
+margin-top:12px;
 }
 
 /* GRID DIAS */
 .dias{
 display:grid;
-grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
 gap:12px;
 }
 
+/* CARD DIA */
 .dia{
 background:#fff;
-padding:14px;
-border-radius:14px;
+padding:16px;
+border-radius:16px;
 text-align:center;
-font-weight:600;
+font-weight:700;
+box-shadow:0 6px 16px rgba(0,0,0,.08);
 cursor:pointer;
-box-shadow:0 4px 12px rgba(0,0,0,.08);
 }
 
 /* MODAL */
@@ -104,10 +112,10 @@ justify-content:center;
 z-index:999;
 }
 
-.modal-content{
+.modal-box{
 background:#fff;
+border-radius:20px;
 padding:16px;
-border-radius:16px;
 width:95%;
 max-height:90%;
 overflow:auto;
@@ -120,10 +128,18 @@ border-radius:12px;
 margin-bottom:8px;
 }
 
+/* OBS */
 .obs{
 font-size:14px;
-color:#374151;
-margin-bottom:16px;
+color:#475569;
+margin-bottom:20px;
+}
+
+/* TABLET */
+@media(min-width:768px){
+.container{
+max-width:700px;
+}
 }
 
 </style>
@@ -136,81 +152,100 @@ margin-bottom:16px;
 
 <!-- ENVIO -->
 <div class="card">
-<label>Data</label>
-<input type="date" id="data">
 
-<label>Observação</label>
-<textarea id="obs"></textarea>
+<div style="font-weight:600">Data</div>
+<div id="dataHoje" style="margin-top:6px;color:#64748b"></div>
 
-<label>Foto</label>
-<input type="file" id="foto">
+<label style="margin-top:10px;display:block">Observação</label>
+<textarea id="obs" placeholder="Descreva a perda..."></textarea>
+
+<label style="margin-top:10px;display:block">Foto</label>
+<input type="file" id="foto" class="file" accept="image/*" capture="environment">
 
 <button onclick="enviar()">Salvar</button>
+
 </div>
 
 <!-- BUSCA -->
 <div class="card">
-<input type="date" id="buscar" onchange="carregarDias()">
+<input type="date" id="buscar" onchange="carregarDias()" style="padding:12px;border-radius:12px;border:1px solid #e2e8f0;width:100%">
 </div>
 
-<!-- LISTA DIAS -->
+<!-- DIAS -->
 <div id="dias" class="dias"></div>
 
 </div>
 
 <!-- MODAL -->
 <div class="modal" id="modal">
-<div class="modal-content" id="conteudo"></div>
+<div class="modal-box" id="conteudo"></div>
 </div>
 
 <script>
 
-const supabase = window.supabase.createClient(
+/* ================= SUPABASE ================= */
+
+const sb = window.supabase.createClient(
   "https://ehxrrpsiksceljmhsfxk.supabase.co",
   "sb_publishable_Jm2ZQKzPS3gNPCKSjFAmYQ_WNMYwF1j"
 )
 
+/* ================= DATA HOJE ================= */
 
-  
+function hoje(){
+const d = new Date()
+return d.toISOString().split("T")[0]
+}
+
+function formatar(d){
+return d.split("-").reverse().join("/")
+}
+
+document.getElementById("dataHoje").innerText = formatar(hoje())
+
 /* ================= ENVIAR ================= */
 
 async function enviar(){
 
-const data = document.getElementById("data").value
+const data = hoje()
 const obs = document.getElementById("obs").value
 const file = document.getElementById("foto").files[0]
 
-if(!data || !file){
-alert("Preencha data e foto")
+if(!file){
+alert("Selecione uma foto")
 return
 }
 
 const nome = Date.now()+"_"+file.name
 
 /* upload */
-const { error:uploadError } = await supabase.storage
+const { error } = await sb.storage
 .from("buffet_percas")
 .upload(nome,file)
 
-if(uploadError){
-alert("Erro upload")
+if(error){
+alert("Erro ao enviar imagem")
 return
 }
 
-const { data:publicData } = supabase.storage
+/* url */
+const { data:publicData } = sb.storage
 .from("buffet_percas")
 .getPublicUrl(nome)
 
 const url = publicData.publicUrl
 
-/* salvar banco */
-await supabase.from("percas").insert([{
+/* salvar */
+await sb.from("percas").insert([{
 data,
 observacao:obs,
 foto_url:url
 }])
 
 alert("Salvo com sucesso!")
+
+document.getElementById("obs").value=""
+document.getElementById("foto").value=""
 
 carregarDias()
 }
@@ -219,9 +254,7 @@ carregarDias()
 
 async function carregarDias(){
 
-let query = supabase
-.from("percas")
-.select("data")
+let query = sb.from("percas").select("data")
 
 const filtro = document.getElementById("buscar").value
 
@@ -240,7 +273,7 @@ dias.forEach(d=>{
 
 const el = document.createElement("div")
 el.className="dia"
-el.innerText = d.split("-").reverse().join("/")
+el.innerText = formatar(d)
 
 el.onclick = ()=>abrirDia(d)
 
@@ -254,7 +287,7 @@ div.appendChild(el)
 
 async function abrirDia(dia){
 
-const { data } = await supabase
+const { data } = await sb
 .from("percas")
 .select("*")
 .eq("data",dia)
@@ -263,10 +296,9 @@ const { data } = await supabase
 const modal = document.getElementById("modal")
 const conteudo = document.getElementById("conteudo")
 
-conteudo.innerHTML = `<h3>${dia}</h3>`
+conteudo.innerHTML = `<h3>${formatar(dia)}</h3>`
 
 data.forEach(item=>{
-
 conteudo.innerHTML += `
 <img src="${item.foto_url}" class="foto">
 <div class="obs">${item.observacao || ""}</div>
@@ -274,10 +306,10 @@ conteudo.innerHTML += `
 })
 
 modal.style.display="flex"
-
 }
 
-/* FECHAR MODAL */
+/* ================= FECHAR ================= */
+
 document.getElementById("modal").onclick = ()=>{
 document.getElementById("modal").style.display="none"
 }
