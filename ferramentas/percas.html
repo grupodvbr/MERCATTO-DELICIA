@@ -70,6 +70,11 @@ background:#22c55e;
 color:#fff;
 font-weight:700;
 margin-top:10px;
+transition:.2s;
+}
+
+button:disabled{
+opacity:.6;
 }
 
 /* DIAS */
@@ -111,17 +116,11 @@ border-radius:18px;
 padding:14px;
 }
 
-/* GALERIA */
+/* GRID */
 .grid{
 display:grid;
 grid-template-columns:repeat(auto-fill,minmax(90px,1fr));
 gap:8px;
-margin-top:10px;
-}
-
-.item{
-display:flex;
-flex-direction:column;
 }
 
 .thumb{
@@ -136,7 +135,6 @@ cursor:pointer;
 font-size:11px;
 margin-top:4px;
 color:#64748b;
-line-height:1.2;
 }
 
 /* VIEWER */
@@ -179,14 +177,41 @@ background:rgba(0,0,0,.5);
 display:none;
 align-items:center;
 justify-content:center;
+flex-direction:column;
 color:#fff;
-font-weight:700;
+z-index:9999;
 }
 
-/* TABLET */
+.spinner{
+width:40px;
+height:40px;
+border:4px solid #fff;
+border-top:4px solid transparent;
+border-radius:50%;
+animation:spin 1s linear infinite;
+margin-bottom:10px;
+}
+
+@keyframes spin{
+to{transform:rotate(360deg)}
+}
+
+/* TOAST */
+.toast{
+position:fixed;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+background:#16a34a;
+color:#fff;
+padding:12px 18px;
+border-radius:12px;
+display:none;
+font-weight:600;
+}
+
 @media(min-width:768px){
 .container{max-width:700px;}
-.grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));}
 }
 
 </style>
@@ -198,25 +223,21 @@ font-weight:700;
 
 <div class="container">
 
-<!-- ENVIO -->
 <div class="card">
-
 <div><b>Hoje:</b> <span id="dataHoje"></span></div>
 
 <textarea id="obs" placeholder="Observação..."></textarea>
 
 <input type="file" id="foto" accept="image/*" capture="environment">
 
-<button onclick="enviar()">Salvar</button>
-
+<button id="btn" onclick="enviar()">Salvar</button>
 </div>
 
-<!-- DIAS -->
 <div id="dias" class="dias"></div>
 
 </div>
 
-<!-- MODAL DIA -->
+<!-- MODAL -->
 <div class="modal" id="modal">
 <div class="modal-box" id="conteudo"></div>
 </div>
@@ -228,7 +249,13 @@ font-weight:700;
 </div>
 
 <!-- LOADING -->
-<div class="loading" id="loading">Enviando...</div>
+<div class="loading" id="loading">
+<div class="spinner"></div>
+Enviando registro...
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">Registro salvo com sucesso</div>
 
 <script>
 
@@ -248,20 +275,29 @@ return d.split("-").reverse().join("/")
 
 document.getElementById("dataHoje").innerText = formatar(hoje())
 
+/* TOAST */
+function mostrarToast(msg){
+const t = document.getElementById("toast")
+t.innerText = msg
+t.style.display="block"
+setTimeout(()=>t.style.display="none",2500)
+}
+
 /* ENVIAR */
 async function enviar(){
 
+const btn = document.getElementById("btn")
 const loading = document.getElementById("loading")
+
+btn.disabled = true
 loading.style.display="flex"
+
+try{
 
 const file = document.getElementById("foto").files[0]
 const obs = document.getElementById("obs").value
 
-if(!file){
-alert("Selecione uma foto")
-loading.style.display="none"
-return
-}
+if(!file) throw "Selecione uma foto"
 
 const nome = `perca_${Date.now()}.jpg`
 
@@ -269,11 +305,7 @@ const { error } = await sb.storage
 .from("buffet_percas")
 .upload(nome,file,{upsert:true})
 
-if(error){
-alert("Erro upload")
-loading.style.display="none"
-return
-}
+if(error) throw "Erro no upload"
 
 const { data } = sb.storage
 .from("buffet_percas")
@@ -288,9 +320,16 @@ foto_url: data.publicUrl
 document.getElementById("obs").value=""
 document.getElementById("foto").value=""
 
-loading.style.display="none"
+mostrarToast("Registro salvo com sucesso")
 
 carregarDias()
+
+}catch(e){
+mostrarToast(e)
+}
+
+loading.style.display="none"
+btn.disabled = false
 }
 
 /* DIAS */
@@ -313,7 +352,7 @@ div.appendChild(el)
 
 }
 
-/* ABRIR DIA */
+/* ABRIR */
 async function abrirDia(dia){
 
 const { data } = await sb
@@ -327,14 +366,14 @@ conteudo.innerHTML = `<h3>${formatar(dia)}</h3><div class="grid">`
 
 data.forEach(item=>{
 conteudo.innerHTML += `
-<div class="item">
+<div>
 <img src="${item.foto_url}" class="thumb" onclick="ver('${item.foto_url}')">
 <div class="obs">${item.observacao || ""}</div>
 </div>
 `
 })
 
-conteudo.innerHTML += `</div>`
+conteudo.innerHTML += "</div>"
 
 document.getElementById("modal").style.display="flex"
 }
@@ -349,14 +388,13 @@ function fecharViewer(){
 document.getElementById("viewer").style.display="none"
 }
 
-/* FECHAR MODAL */
+/* FECHAR */
 document.getElementById("modal").onclick = e=>{
 if(e.target.id==="modal"){
 e.target.style.display="none"
 }
 }
 
-/* INIT */
 carregarDias()
 
 </script>
