@@ -29,7 +29,7 @@ color:#0f172a;
 
 /* HEADER */
 .header{
-padding:18px;
+padding:20px;
 font-size:20px;
 font-weight:800;
 background:#020617;
@@ -46,20 +46,19 @@ margin:auto;
 /* CARD */
 .card{
 background:#fff;
-border-radius:18px;
+border-radius:20px;
 padding:16px;
-box-shadow:0 10px 30px rgba(0,0,0,.08);
+box-shadow:0 12px 30px rgba(0,0,0,.08);
 margin-bottom:16px;
 }
 
-/* INPUT */
+/* TEXTAREA */
 textarea{
 width:100%;
 padding:12px;
 border-radius:12px;
 border:1px solid #e2e8f0;
 margin-top:8px;
-font-family:Inter;
 }
 
 /* FILE */
@@ -87,7 +86,7 @@ grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
 gap:12px;
 }
 
-/* CARD DIA */
+/* DIA */
 .dia{
 background:#fff;
 padding:16px;
@@ -98,14 +97,69 @@ box-shadow:0 6px 16px rgba(0,0,0,.08);
 cursor:pointer;
 }
 
-/* MODAL */
+/* ===== GALERIA ===== */
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+gap:10px;
+margin-top:12px;
+}
+
+.thumb{
+width:100%;
+aspect-ratio:1/1;
+object-fit:cover;
+border-radius:12px;
+cursor:pointer;
+}
+
+/* OBS */
+.obs{
+font-size:13px;
+margin-top:4px;
+color:#475569;
+}
+
+/* ===== MODAL GALERIA ===== */
+.viewer{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#000;
+display:none;
+align-items:center;
+justify-content:center;
+z-index:9999;
+}
+
+.viewer img{
+max-width:95%;
+max-height:85%;
+border-radius:12px;
+}
+
+.close{
+position:absolute;
+top:20px;
+right:20px;
+font-size:22px;
+color:#fff;
+background:rgba(0,0,0,.5);
+padding:8px 12px;
+border-radius:10px;
+cursor:pointer;
+}
+
+/* ===== MODAL DIA ===== */
 .modal{
 position:fixed;
 top:0;
 left:0;
 width:100%;
 height:100%;
-background:rgba(0,0,0,.6);
+background:rgba(0,0,0,.5);
 display:none;
 align-items:center;
 justify-content:center;
@@ -121,80 +175,79 @@ max-height:90%;
 overflow:auto;
 }
 
-/* FOTO */
-.foto{
+/* ===== OVERLAY ===== */
+.loading{
+position:fixed;
+top:0;
+left:0;
 width:100%;
-border-radius:12px;
-margin-bottom:8px;
-}
-
-/* OBS */
-.obs{
-font-size:14px;
-color:#475569;
-margin-bottom:20px;
+height:100%;
+background:rgba(0,0,0,.5);
+display:none;
+align-items:center;
+justify-content:center;
+color:#fff;
+font-weight:700;
+z-index:9999;
 }
 
 /* TABLET */
 @media(min-width:768px){
-.container{
-max-width:700px;
-}
+.container{max-width:700px;}
+.grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
 }
 
 </style>
 </head>
+
 <body>
 
 <div class="header">📸 Controle de Perdas</div>
 
 <div class="container">
 
-<!-- ENVIO -->
 <div class="card">
+<div><b>Data:</b> <span id="dataHoje"></span></div>
 
-<div style="font-weight:600">Data</div>
-<div id="dataHoje" style="margin-top:6px;color:#64748b"></div>
+<textarea id="obs" placeholder="Observação..."></textarea>
 
-<label style="margin-top:10px;display:block">Observação</label>
-<textarea id="obs" placeholder="Descreva a perda..."></textarea>
-
-<label style="margin-top:10px;display:block">Foto</label>
 <input type="file" id="foto" class="file" accept="image/*" capture="environment">
 
 <button onclick="enviar()">Salvar</button>
-
 </div>
 
-<!-- BUSCA -->
 <div class="card">
-<input type="date" id="buscar" onchange="carregarDias()" style="padding:12px;border-radius:12px;border:1px solid #e2e8f0;width:100%">
+<input type="date" id="buscar" onchange="carregarDias()" style="width:100%;padding:12px;border-radius:12px">
 </div>
 
-<!-- DIAS -->
 <div id="dias" class="dias"></div>
 
 </div>
 
-<!-- MODAL -->
+<!-- MODAL DIA -->
 <div class="modal" id="modal">
 <div class="modal-box" id="conteudo"></div>
 </div>
 
-<script>
+<!-- VIEWER -->
+<div class="viewer" id="viewer">
+<div class="close" onclick="fecharViewer()">✕</div>
+<img id="imgViewer">
+</div>
 
-/* ================= SUPABASE ================= */
+<!-- LOADING -->
+<div class="loading" id="loading">Enviando...</div>
+
+<script>
 
 const sb = window.supabase.createClient(
   "https://ehxrrpsiksceljmhsfxk.supabase.co",
   "sb_publishable_Jm2ZQKzPS3gNPCKSjFAmYQ_WNMYwF1j"
 )
 
-/* ================= DATA HOJE ================= */
-
+/* DATA */
 function hoje(){
-const d = new Date()
-return d.toISOString().split("T")[0]
+return new Date().toISOString().split("T")[0]
 }
 
 function formatar(d){
@@ -203,66 +256,55 @@ return d.split("-").reverse().join("/")
 
 document.getElementById("dataHoje").innerText = formatar(hoje())
 
-/* ================= ENVIAR ================= */
-
+/* ENVIAR */
 async function enviar(){
 
-const data = hoje()
-const obs = document.getElementById("obs").value
+const loading = document.getElementById("loading")
+loading.style.display="flex"
+
 const file = document.getElementById("foto").files[0]
+const obs = document.getElementById("obs").value
 
 if(!file){
 alert("Selecione uma foto")
+loading.style.display="none"
 return
 }
 
-const nome = Date.now()+"_"+file.name
+const nome = `perca_${Date.now()}.jpg`
 
-/* upload */
 const { error } = await sb.storage
 .from("buffet_percas")
-.upload(nome,file)
+.upload(nome,file,{upsert:true})
 
 if(error){
-alert("Erro ao enviar imagem")
+alert("Erro upload")
+loading.style.display="none"
 return
 }
 
-/* url */
-const { data:publicData } = sb.storage
+const { data } = sb.storage
 .from("buffet_percas")
 .getPublicUrl(nome)
 
-const url = publicData.publicUrl
-
-/* salvar */
 await sb.from("percas").insert([{
-data,
-observacao:obs,
-foto_url:url
+data: hoje(),
+observacao: obs,
+foto_url: data.publicUrl
 }])
-
-alert("Salvo com sucesso!")
 
 document.getElementById("obs").value=""
 document.getElementById("foto").value=""
 
+loading.style.display="none"
+
 carregarDias()
 }
 
-/* ================= CARREGAR DIAS ================= */
-
+/* DIAS */
 async function carregarDias(){
 
-let query = sb.from("percas").select("data")
-
-const filtro = document.getElementById("buscar").value
-
-if(filtro){
-query = query.eq("data",filtro)
-}
-
-const { data } = await query
+const { data } = await sb.from("percas").select("data")
 
 const dias = [...new Set(data.map(d=>d.data))]
 
@@ -270,48 +312,56 @@ const div = document.getElementById("dias")
 div.innerHTML=""
 
 dias.forEach(d=>{
-
 const el = document.createElement("div")
 el.className="dia"
-el.innerText = formatar(d)
-
-el.onclick = ()=>abrirDia(d)
-
+el.innerText=formatar(d)
+el.onclick=()=>abrirDia(d)
 div.appendChild(el)
-
 })
 
 }
 
-/* ================= ABRIR DIA ================= */
-
+/* ABRIR DIA */
 async function abrirDia(dia){
 
 const { data } = await sb
 .from("percas")
 .select("*")
 .eq("data",dia)
-.order("created_at",{ascending:false})
 
-const modal = document.getElementById("modal")
 const conteudo = document.getElementById("conteudo")
 
-conteudo.innerHTML = `<h3>${formatar(dia)}</h3>`
+conteudo.innerHTML = `<h3>${formatar(dia)}</h3><div class="grid">`
 
 data.forEach(item=>{
 conteudo.innerHTML += `
-<img src="${item.foto_url}" class="foto">
+<div>
+<img src="${item.foto_url}" class="thumb" onclick="ver('${item.foto_url}')">
 <div class="obs">${item.observacao || ""}</div>
+</div>
 `
 })
 
-modal.style.display="flex"
+conteudo.innerHTML += `</div>`
+
+document.getElementById("modal").style.display="flex"
 }
 
-/* ================= FECHAR ================= */
+/* VIEWER */
+function ver(src){
+document.getElementById("imgViewer").src = src
+document.getElementById("viewer").style.display="flex"
+}
 
-document.getElementById("modal").onclick = ()=>{
-document.getElementById("modal").style.display="none"
+function fecharViewer(){
+document.getElementById("viewer").style.display="none"
+}
+
+/* FECHAR MODAL */
+document.getElementById("modal").onclick = e=>{
+if(e.target.id==="modal"){
+e.target.style.display="none"
+}
 }
 
 /* INIT */
