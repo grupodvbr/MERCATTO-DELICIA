@@ -55,24 +55,138 @@ if(confirmar){
 try{
 
 const acao = confirmar
-// remove campos proibidos
-if(acao.dados && acao.dados.created_at){
+
+// 🔥 LIMPA CAMPOS PROIBIDOS
+if(acao.dados?.created_at){
 delete acao.dados.created_at
 }
+
+/* ================= INSERT ================= */
+
 if(acao.operacao === "insert"){
 
-const { data, error } = await supabase
-.from(acao.tabela)
-.insert(acao.dados)
-.select()
+// 🔥 TRATAMENTO ESPECÍFICO PARA RESERVAS
+if(acao.tabela === "reservas_mercatto"){
+
+const dados = {
+  
+  nome: acao.dados.nome || "Cliente",
+  
+  telefone: acao.dados.telefone || "ADMIN", // 🔥 NUNCA VAZIO
+  
+  email: acao.dados.email || "nao_informado@mercatto.com",
+  
+  pessoas: parseInt(acao.dados.pessoas) || 1,
+  
+  mesa: acao.dados.mesa || "Salão",
+  
+  cardapio: acao.dados.cardapio || "",
+  
+  datahora: acao.dados.datahora,
+  
+  observacoes: acao.dados.observacoes || "",
+  
+  status: acao.dados.status || "Pendente",
+  
+  valorEstimado: 0,
+  pagamentoAntecipado: 0,
+  banco: "",
+  
+  // 🔥 PADRONIZA (REMOVE DUPLICIDADE)
+  comandaIndividual: acao.dados.comandaIndividual || "Não"
+}
+
+// 🔥 REMOVE CAMPO BUGADO
+delete dados.comandaindividual
+
+const { error } = await supabase
+.from("reservas_mercatto")
+.insert(dados)
 
 if(error){
-console.error("Erro insert:", error)
-throw error
+console.error("❌ ERRO REAL AO SALVAR:", error)
+throw new Error(error.message)
+}
+
+}else{
+
+// 🔥 INSERT NORMAL (OUTRAS TABELAS)
+
+const { error } = await supabase
+.from(acao.tabela)
+.insert(acao.dados)
+
+if(error){
+console.error("❌ ERRO REAL:", error)
+throw new Error(error.message)
 }
 
 }
 
+}
+
+/* ================= UPDATE ================= */
+
+if(acao.operacao === "update"){
+
+const { error } = await supabase
+.from(acao.tabela)
+.update(acao.dados)
+.match(acao.filtro)
+
+if(error){
+console.error("❌ ERRO UPDATE:", error)
+throw new Error(error.message)
+}
+
+}
+
+/* ================= DELETE ================= */
+
+if(acao.operacao === "delete"){
+
+const { error } = await supabase
+.from(acao.tabela)
+.delete()
+.match(acao.filtro)
+
+if(error){
+console.error("❌ ERRO DELETE:", error)
+throw new Error(error.message)
+}
+
+}
+
+/* ================= SUCESSO ================= */
+
+await supabase
+.from("administrador_chat")
+.insert({
+role:"assistant",
+mensagem:"✅ Ação executada com sucesso"
+})
+
+return res.json({
+resposta:"✅ Ação executada com sucesso"
+})
+
+}catch(e){
+
+console.error("❌ ERRO EXECUÇÃO:", e)
+
+return res.json({
+resposta:"Erro ao executar ação"
+})
+
+}
+
+}
+
+
+
+
+
+  
 if(acao.operacao === "update"){
 
 const { data, error } = await supabase
