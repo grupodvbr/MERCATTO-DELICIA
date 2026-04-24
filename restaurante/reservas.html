@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Painel de Reservas • Mercatto Delícia</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <meta name="color-scheme" content="light dark" />
   <style>
 :root{
@@ -74,15 +75,10 @@ color:var(--text);
 ========================= */
 
 .wrap{
-
-width:100%;
-
-max-width:1800px;
-
-margin:auto;
-
-padding:28px 32px 40px;
-
+  width:100%;
+  max-width:1200px;
+  margin:auto;
+  padding:16px;
 }
 
 /* =========================
@@ -284,8 +280,8 @@ flex-wrap:wrap;
 
 button{
 
-padding:12px 14px;
-
+  padding:10px 12px;
+  font-size:14px;
 border-radius:12px;
 
 border:1px solid var(--line);
@@ -546,9 +542,8 @@ border:1px solid var(--line);
 
 border-radius:12px;
 
-padding:8px;
-
-min-height:85px;
+  min-height:65px;
+  padding:6px;
 
 position:relative;
 
@@ -587,34 +582,28 @@ font-size:.9rem;
 }
 
 .cal-day .tags{
+  position:absolute;
+  bottom:4px;
+  left:4px;
+  right:4px;
 
-position:absolute;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
 
-bottom:6px;
-left:6px;
-right:6px;
+  max-height:40px;
+  overflow-y:auto;
 
-display:flex;
-
-gap:4px;
-
-flex-wrap:wrap;
-
+  padding-right:2px;
 }
-
 /* =========================
    TAGS
 ========================= */
 .tag{
-
-font-size:.68rem;
-
-padding:2px 6px;
-
-border-radius:999px;
-
-border:1px solid var(--line);
-
+  font-size:10px;
+  padding:2px 4px;
+  line-height:1.1;
+  white-space:nowrap;
 }
 
 .t-pend{
@@ -861,23 +850,25 @@ overflow:hidden;
 ========================= */
 
 .inline-grid{
-
-display:grid;
-
-grid-template-columns:1fr 1fr;
-
-gap:12px;
-
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
 }
 
 .inline-3{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
 
-display:grid;
+@media(min-width:700px){
+  .inline-grid{
+    grid-template-columns:1fr 1fr;
+  }
 
-grid-template-columns:1fr 1fr 1fr;
-
-gap:12px;
-
+  .inline-3{
+    grid-template-columns:1fr 1fr 1fr;
+  }
 }
 
 @media (max-width:760px){
@@ -1010,6 +1001,55 @@ font-size:.9rem;
 }
 
 }
+.summary-compact{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  padding:10px;
+}
+
+.mini-kpi{
+  display:flex;
+  align-items:center;
+  gap:8px;
+
+  background:#081428;
+  border:1px solid var(--line);
+  border-radius:10px;
+
+  padding:10px;
+}
+
+.mini-kpi span{
+  font-size:18px;
+}
+
+.mini-kpi small{
+  display:block;
+  font-size:.7rem;
+  color:var(--muted);
+}
+
+.mini-kpi b{
+  font-size:.95rem;
+  font-weight:800;
+}
+
+.mini-kpi.total{
+  background:linear-gradient(90deg,#1e3a8a,#2563eb);
+}
+
+  @media (max-width:600px){
+  .summary-compact{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
+
+
+
+    
+    
   </style>
 </head>
 <body>
@@ -1076,11 +1116,10 @@ font-size:.9rem;
       <option>Buffet Diamante</option>
       <option>Buffet Master Gold</option>
 
-            <option>Experiência Oriental</option>
-            <option>Experiência Portuguesa</option>
-            <option>Experiência Italiana</option>
-            <option>Experiência Grega</option>
-            <option>Happy Hour</option>
+            <option>Rodízio Italiano</option>
+            <option>Rodízio Oriental</option>
+            <option>À lá carte</option>
+            <option>Buffet</option>
 
 
       
@@ -1168,11 +1207,21 @@ font-size:.9rem;
     <div class="card" style="margin-top:20px">
       <div class="card-head">
         <h2>Calendário de Reservas</h2>
-        <div class="toolbar">
-          <button id="prevMonth" class="btn btn-ghost">◀ Mês anterior</button>
-          <button id="todayBtn" class="btn btn-ghost">Hoje</button>
-          <button id="nextMonth" class="btn btn-ghost">Próximo mês ▶</button>
-        </div>
+
+
+<div class="toolbar">
+  <button id="prevMonth" class="btn btn-ghost">◀ Mês anterior</button>
+  <button id="todayBtn" class="btn btn-ghost">Hoje</button>
+  <button id="nextMonth" class="btn btn-ghost">Próximo mês ▶</button>
+
+  <button id="btnPDF" class="btn btn-primary">
+    📄 Gerar PDF do Mês
+  </button>
+</div>
+
+
+
+        
       </div>
 
       <div class="cal">
@@ -1185,27 +1234,49 @@ font-size:.9rem;
 
       <div class="summary">
         <h3 style="margin:0 0 6px 0; color:var(--muted)">Resumo do mês</h3>
-        <div class="summary-grid">
-          <div class="kpi"><div class="label">Antecipado (mês)</div><div class="value" id="kpiAntecipado">R$ 0,00</div></div>
-          <div class="kpi"><div class="label">Final pago (mês)</div><div class="value" id="kpiFinalPago">R$ 0,00</div></div>
-          <div class="kpi">
-            <div class="label">A receber (mês)</div>
-            <div class="value" id="kpiAReceber">R$ 0,00</div>
-            <div class="sum-note">* "A receber" não entra na soma do mês (apenas adiantamento + final pago).</div>
-          </div>
-        </div>
-        <div class="section" style="padding-top:12px">
-          <div class="kpi" style="display:flex; align-items:center; justify-content:space-between">
-            <div>
-              <div class="label">Total do mês (adiantamento + final pago)</div>
-              <div class="value" id="kpiTotalMes">R$ 0,00</div>
-            </div>
-            <button id="refreshBtn" class="btn btn-ghost" style="width:auto">Atualizar</button>
-          </div>
-        </div>
-      </div>
+
+
+
+
+        <div class="summary-compact">
+
+  <div class="mini-kpi">
+    <span>💰</span>
+    <div>
+      <small>Antecipado</small>
+      <b id="kpiAntecipado">R$ 0,00</b>
     </div>
   </div>
+
+  <div class="mini-kpi">
+    <span>🏁</span>
+    <div>
+      <small>Final</small>
+      <b id="kpiFinalPago">R$ 0,00</b>
+    </div>
+  </div>
+
+  <div class="mini-kpi">
+    <span>📥</span>
+    <div>
+      <small>Receber</small>
+      <b id="kpiAReceber">R$ 0,00</b>
+    </div>
+  </div>
+
+  <div class="mini-kpi total">
+    <span>📊</span>
+    <div>
+      <small>Total</small>
+      <b id="kpiTotalMes">R$ 0,00</b>
+    </div>
+  </div>
+
+</div>
+
+      </div>
+
+</div> <!-- 🔥 FALTAVA ISSO AQUI -->
 
   <!-- ============ MODAIS ============ -->
 <div class="modal" id="dayModal">
@@ -1546,48 +1617,42 @@ const items = state.reservas.filter(r=>{
 
   return ymd(local) === ymd(d)
 });
-        // Agrupar por setor e colorir VIP vs OUTROS
-        const norm = s => (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
-        const groups = new Map();
-        for (const r of items) {
-          const label = (r.mesa || '—').trim();
-          const key   = norm(label);
-          groups.set(key, { label, count:(groups.get(key)?.count||0)+1 });
-        }
-        const isVipKey = k => k === 'SALA VIP' || k === 'SALA VIP 2';
-        const sectorTags = Array.from(groups.entries()).map(([key, info]) => {
-          const vip = isVipKey(key);
-let css="t-outros"
+      
 
-if(key.includes("PAULO")) css="t-vip"
-if(key.includes("SACADA")) css="t-pend"
-if(key.includes("SALAO")) css="t-done"
-  return `<span class="tag ${css}">${info.count} ${info.label}</span>`;
-        }).join('');
+
+      const total = items.length
 
 const pend = items.filter(r=>{
-const s = (r.status || "").trim()
+  const s = (r.status || "").trim()
   return s === "Pendente"
 }).length
 
 const conf = items.filter(r=>{
-const s = (r.status || "").trim()
+  const s = (r.status || "").trim()
   return s === "Confirmada"
 }).length
 
 const done = items.filter(r=>{
-const s = (r.status || "").trim()
+  const s = (r.status || "").trim()
   return s === "Concluída"
 }).length
-        cell.innerHTML = `
-          <div class="num">${d.getDate()}</div>
-          <div class="tags">
-            ${sectorTags}
-${pend ? `<span class="tag t-pend">Pend: ${pend}</span>` : ''}
-${conf ? `<span class="tag t-vip">Conf: ${conf}</span>` : ''}
-${done ? `<span class="tag t-done">Conc: ${done}</span>` : ''}
-          </div>
-        `;
+
+const resumoTags = `
+${total ? `<span class="tag t-outros">${total} reservas</span>` : ''}
+`
+
+cell.innerHTML = `
+  <div class="num">${d.getDate()}</div>
+  <div class="tags">
+    ${resumoTags}
+    ${pend ? `<span class="tag t-pend">P: ${pend}</span>` : ''}
+    ${conf ? `<span class="tag t-vip">C: ${conf}</span>` : ''}
+    ${done ? `<span class="tag t-done">OK: ${done}</span>` : ''}
+  </div>
+`;
+
+
+        
         cell.addEventListener('click', ()=> openDayModal(d, items));
         calGrid.appendChild(cell);
       }
@@ -2153,7 +2218,6 @@ $('#confirmDelete').addEventListener('click', async ()=>{
     $('#prevMonth').addEventListener('click', ()=>{ const m = new Date(state.ano,state.mes,1); m.setMonth(m.getMonth()-1); state.mes=m.getMonth(); state.ano=m.getFullYear(); refreshAll(); });
     $('#nextMonth').addEventListener('click', ()=>{ const m = new Date(state.ano,state.mes,1); m.setMonth(m.getMonth()+1); state.mes=m.getMonth(); state.ano=m.getFullYear(); refreshAll(); });
     $('#todayBtn').addEventListener('click', ()=>{ const t=new Date(); state.mes=t.getMonth(); state.ano=t.getFullYear(); refreshAll(); });
-    $('#refreshBtn').addEventListener('click', ()=> refreshAll());
 
     async function loadMonth(ano, mes){
       try{
@@ -2488,7 +2552,89 @@ buildCalendar()
 updateSummary()
 
 }
-  
+  document.getElementById("btnPDF").addEventListener("click", gerarPDFMes);
+
+function gerarPDFMes(){
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const mesNome = monthNames[state.mes];
+  const ano = state.ano;
+
+  const reservas = state.reservas.filter(r=>{
+    if(!r.datahora) return false;
+    const d = new Date(r.datahora);
+    return d.getMonth() === state.mes && d.getFullYear() === ano;
+  });
+
+  // ===== CABEÇALHO =====
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(18);
+  doc.text(`Relatório de Reservas`, 14, 18);
+
+  doc.setFontSize(12);
+  doc.text(`${mesNome} de ${ano}`, 14, 26);
+
+  // ===== RESUMO =====
+  let y = 36;
+
+  const totalReservas = reservas.length;
+  const totalPessoas = reservas.reduce((a,r)=>a+Number(r.pessoas||0),0);
+
+  const totalEstimado = reservas.reduce((a,r)=>a+parseBRL(r.valorEstimado||0),0);
+  const totalAntecipado = reservas.reduce((a,r)=>a+parseBRL(r.pagamentoAntecipado||0),0);
+  const totalFinal = reservas.reduce((a,r)=>a+parseBRL(r.valorFinalPago||0),0);
+
+  doc.setFont("helvetica","bold");
+  doc.text("Resumo Geral", 14, y);
+  y+=8;
+
+  doc.setFont("helvetica","normal");
+  doc.text(`Total de Reservas: ${totalReservas}`, 14, y); y+=6;
+  doc.text(`Total de Pessoas: ${totalPessoas}`, 14, y); y+=6;
+  doc.text(`Valor Estimado: ${formatBRL(totalEstimado)}`, 14, y); y+=6;
+  doc.text(`Valor Antecipado: ${formatBRL(totalAntecipado)}`, 14, y); y+=6;
+  doc.text(`Valor Final Pago: ${formatBRL(totalFinal)}`, 14, y); y+=10;
+
+  // ===== LISTA =====
+  doc.setFont("helvetica","bold");
+  doc.text("Reservas Detalhadas", 14, y);
+  y+=8;
+
+  doc.setFontSize(10);
+
+  reservas.forEach(r=>{
+
+    if(y > 270){
+      doc.addPage();
+      y = 20;
+    }
+
+    const data = new Date(r.datahora).toLocaleString("pt-BR");
+
+    doc.setFont("helvetica","bold");
+    doc.text(`${r.nome}`, 14, y);
+    y+=5;
+
+    doc.setFont("helvetica","normal");
+
+    doc.text(`Data: ${data}`, 14, y); y+=4;
+    doc.text(`Pessoas: ${r.pessoas} • Local: ${r.mesa}`, 14, y); y+=4;
+    doc.text(`Status: ${r.status}`, 14, y); y+=4;
+
+    doc.text(
+      `Valores: Estimado ${formatBRL(r.valorEstimado)} | Antecipado ${formatBRL(r.pagamentoAntecipado)} | Final ${formatBRL(r.valorFinalPago)}`,
+      14, y
+    );
+
+    y+=8;
+
+  });
+
+  // ===== DOWNLOAD =====
+  doc.save(`relatorio_reservas_${mesNome}_${ano}.pdf`);
+}
   
 </script>
 </body>
